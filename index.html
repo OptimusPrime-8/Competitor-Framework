@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CompeteBase Ultimate - Market Intelligence</title>
+    
+    <!-- LIBRARIES -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a; --secondary: #1e293b; --accent: #3b82f6; 
+            --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0; 
+            --text: #334155; --text-light: #64748b;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* NAVBAR */
+        .navbar { height: 64px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 20px; z-index: 50; }
+        .logo { font-size: 18px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        
+        /* SEARCH BAR */
+        .search-wrapper { flex: 1; max-width: 600px; position: relative; }
+        .search-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+        .search-input { width: 100%; padding: 10px 10px 10px 36px; border-radius: 8px; border: 1px solid var(--border); background: #f1f5f9; outline: none; transition: 0.2s; font-size: 14px; }
+        .search-input:focus { background: white; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        .nav-actions { display: flex; gap: 10px; margin-left: auto; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 8px; transition: 0.2s; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-accent { background: var(--accent); color: white; }
+        .btn-outline { border-color: var(--border); background: white; color: var(--text); }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* TABS */
+        .tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 8px; }
+        .tab { padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 6px; color: var(--text-light); }
+        .tab.active { background: white; color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        /* LAYOUT */
+        .layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 250px; background: var(--secondary); color: #94a3b8; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+        .sidebar-header { padding: 20px 20px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+        .nav-item { padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: 0.2s; border-left: 3px solid transparent; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: white; border-left-color: var(--accent); }
+        .nav-item .count { margin-left: auto; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+
+        /* MAIN CONTENT */
+        .main { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
+
+        /* ANALYTICS SECTION */
+        .analytics-view { display: none; }
+        .analytics-view.active { display: block; }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .kpi-value { font-size: 24px; font-weight: 700; color: var(--primary); }
+        .kpi-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+
+        .charts-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+        .chart-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border); height: 350px; position: relative; }
+        .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 15px; color: var(--primary); display: flex; justify-content: space-between; }
+
+        /* LIST VIEW */
+        .list-view { display: none; }
+        .list-view.active { display: block; }
+
+        .table-container { background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; text-align: left; padding: 12px 20px; font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+        tr:hover { background: #f8fafc; cursor: pointer; }
+        
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-na { background: #eff6ff; color: #2563eb; } /* North America */
+        .badge-eu { background: #f0fdf4; color: #16a34a; } /* Europe */
+        .badge-as { background: #fefce8; color: #ca8a04; } /* Asia */
+
+        /* UTILS */
+        #fileInput { display: none; }
+        .empty-state { text-align: center; padding: 80px; color: var(--text-light); }
+        
+        /* COMPARISON MODAL */
+        .modal { position: fixed; inset: 0; background: white; z-index: 100; display: none; flex-direction: column; }
+        .modal-header { height: 60px; padding: 0 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .modal-content { flex: 1; overflow: auto; padding: 24px; background: var(--bg); }
+        .comp-table { width: 100%; border-collapse: collapse; }
+        .comp-table th { background: white; position: sticky; top: 0; padding: 15px; border-bottom: 2px solid var(--accent); }
+        .comp-table td { background: white; border: 1px solid var(--border); padding: 12px; vertical-align: top; }
+        .comp-section { background: #f1f5f9; font-weight: 700; color: var(--primary); }
+
+        .fab { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; display: none; align-items: center; gap: 8px; z-index: 40; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="logo"><i class="fa-solid fa-chart-pie" style="color:var(--accent)"></i> CompeteBase <span>ULTIMATE</span></div>
+        
+        <div class="search-wrapper">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" class="search-input" id="globalSearch" placeholder="Search companies, products, strategies..." onkeyup="handleSearch()">
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchView('analytics', this)">Analytics</div>
+            <div class="tab" onclick="switchView('list', this)">Data Grid</div>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn btn-outline" onclick="resetData()">Reset</button>
+            <button class="btn btn-accent" onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-upload"></i> Upload Excel
+            </button>
+            <input type="file" id="fileInput" accept=".xlsx" onchange="processExcel(this)">
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-header">Smart Filters</div>
+            <div class="nav-item active" onclick="filterData('region', 'All', this)">
+                <i class="fa-solid fa-globe"></i> All Regions
+            </div>
+            <div id="region-list"></div>
+
+            <div class="sidebar-header">Data Categories</div>
+            <div id="category-list"></div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+            
+            <!-- ANALYTICS VIEW -->
+            <div id="analytics" class="analytics-view active">
+                <!-- KPI CARDS -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-companies">0</div>
+                        <div class="kpi-label">Competitors</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-revenue">$0M</div>
+                        <div class="kpi-label">Total Tracked Revenue (Est)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-rating">0.0</div>
+                        <div class="kpi-label">Avg Market Sentiment</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-products">0</div>
+                        <div class="kpi-label">Total SKUs/Products</div>
+                    </div>
+                </div>
+
+                <!-- CHARTS -->
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <div class="chart-title">Revenue Market Share (Est) <i class="fa-solid fa-chart-simple"></i></div>
+                        <canvas id="revChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-title">Geographic Distribution <i class="fa-solid fa-earth-americas"></i></div>
+                        <canvas id="geoChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-title">Sentiment Radar (Strengths) <i class="fa-solid fa-bullseye"></i></div>
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-title">Employee Efficiency (Rev per Emp) <i class="fa-solid fa-users"></i></div>
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIST VIEW -->
+            <div id="list" class="list-view">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="40">Compare</th>
+                                <th width="25%">Company Name</th>
+                                <th width="15%">Region</th>
+                                <th width="15%">Industry</th>
+                                <th width="15%">Revenue</th>
+                                <th width="10%">Rating</th>
+                                <th width="10%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                    <div id="empty-state" class="empty-state">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px; margin-bottom:10px;"></i>
+                        <h3>No Intelligence Data</h3>
+                        <p>Upload your Excel file to generate the dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPARISON MODAL -->
+    <div class="modal" id="compareModal">
+        <div class="modal-header">
+            <h2>Competitor Comparison Matrix</h2>
+            <button class="btn btn-outline" onclick="closeCompare()">Close View</button>
+        </div>
+        <div class="modal-content">
+            <table class="comp-table" id="compTable"></table>
+        </div>
+    </div>
+
+    <div class="fab" id="compareFab" onclick="openCompare()">
+        <i class="fa-solid fa-scale-balanced"></i> Compare (<span id="compCount">0</span>)
+    </div>
+
+    <script>
+        // --- 1. CORE STATE ---
+        const DB_KEY = 'competeBase_ult_v1';
+        let db = []; // Master Database
+        let filteredDB = []; // Currently displayed data
+        let compareSet = new Set();
+        let charts = {}; // Store Chart instances
+
+        // --- 2. INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem(DB_KEY);
+            if (saved) {
+                db = JSON.parse(saved);
+                filteredDB = [...db];
+                updateUI();
+            }
+        });
+
+        // --- 3. EXCEL PARSER (INTELLIGENCE ENGINE) ---
+        function processExcel(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                if (rows.length < 2) return alert("File Empty");
+
+                const headers = rows[0];
+                const newEntries = [];
+
+                // Identify Columns (Competitors start at index 2)
+                for (let c = 2; c < headers.length; c++) {
+                    if (!headers[c]) continue;
+
+                    let entry = {
+                        id: Date.now() + Math.random(),
+                        name: headers[c],
+                        data: [],
+                        smart: { region: 'Unknown', revenue: 0, revenueStr: '-', employees: 0, rating: 0, industry: 'N/A' }
+                    };
+
+                    // Process Rows
+                    for (let r = 1; r < rows.length; r++) {
+                        const cat = rows[r][0] ? rows[r][0].trim() : "Other";
+                        const key = rows[r][1] ? rows[r][1].trim() : "";
+                        const val = rows[r][c] ? String(rows[r][c]).trim() : "-";
+                        
+                        if (key) {
+                            entry.data.push({ cat, key, val });
+                            
+                            // --- SMART PARSING ---
+                            const k = key.toLowerCase();
+                            const v = val.toLowerCase();
+
+                            if (k === 'company name') entry.name = val;
+                            
+                            // Region
+                            if (k.includes('headquarters') || k.includes('location')) {
+                                if (v.includes('usa') || v.includes('united states') || v.includes('canada')) entry.smart.region = 'North America';
+                                else if (v.includes('china') || v.includes('japan') || v.includes('asia')) entry.smart.region = 'Asia';
+                                else if (v.includes('europe') || v.includes('uk') || v.includes('germany')) entry.smart.region = 'Europe';
+                            }
+
+                            // Revenue (Extract number)
+                            if (k.includes('revenue')) {
+                                entry.smart.revenueStr = val;
+                                // Basic regex to find millions
+                                const nums = val.match(/(\d+)/g);
+                                if (nums) {
+                                    // Average if range (e.g. 75-150)
+                                    const sum = nums.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                                    entry.smart.revenue = sum / nums.length; 
+                                }
+                            }
+
+                            // Employees
+                            if (k.includes('employee count')) {
+                                const nums = val.match(/(\d+)/g);
+                                if (nums) entry.smart.employees = parseFloat(nums[0]);
+                            }
+
+                            // Rating
+                            if (cat === 'Feedback' && val.includes('/')) {
+                                entry.smart.rating = parseFloat(val.split('/')[0]);
+                            }
+
+                            // Industry
+                            if (k.includes('type of company') || k.includes('industry')) entry.smart.industry = val;
+                        }
+                    }
+                    newEntries.push(entry);
+                }
+
+                db = [...newEntries, ...db];
+                filteredDB = [...db];
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
+                updateUI();
+                input.value = ""; // Reset
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- 4. UI UPDATE LOGIC ---
+        function updateUI() {
+            renderSidebar();
+            renderKPIs();
+            renderCharts();
+            renderTable();
+        }
+
+        // --- 5. SEARCH & FILTER ---
+        function handleSearch() {
+            const q = document.getElementById('globalSearch').value.toLowerCase();
+            
+            filteredDB = db.filter(comp => {
+                // Search name
+                if (comp.name.toLowerCase().includes(q)) return true;
+                // Deep search in data
+                return comp.data.some(d => d.val.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q));
+            });
+            
+            updateUI();
+        }
+
+        function filterData(type, val, el) {
+            // Update active state in sidebar
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            if(el) el.classList.add('active');
+
+            if(val === 'All') {
+                filteredDB = [...db];
+            } else if(type === 'region') {
+                filteredDB = db.filter(c => c.smart.region === val);
+            } else if(type === 'category') {
+                filteredDB = db.filter(c => c.data.some(d => d.cat === val));
+            }
+            updateUI();
+        }
+
+        // --- 6. RENDER FUNCTIONS ---
+        function renderSidebar() {
+            // Regions
+            const regions = [...new Set(db.map(c => c.smart.region))].filter(r => r !== 'Unknown');
+            const rList = document.getElementById('region-list');
+            rList.innerHTML = '';
+            regions.forEach(r => {
+                const count = db.filter(c => c.smart.region === r).length;
+                rList.innerHTML += `
+                    <div class="nav-item" onclick="filterData('region', '${r}', this)">
+                        <i class="fa-solid fa-map-pin"></i> ${r} <span class="count">${count}</span>
+                    </div>`;
+            });
+
+            // Categories
+            const cats = [...new Set(db.flatMap(c => c.data.map(d => d.cat)))];
+            const cList = document.getElementById('category-list');
+            cList.innerHTML = '';
+            cats.sort().forEach(cat => {
+                cList.innerHTML += `
+                    <div class="nav-item" onclick="filterData('category', '${cat}', this)">
+                        <i class="fa-solid fa-folder"></i> ${cat}
+                    </div>`;
+            });
+        }
+
+        function renderKPIs() {
+            document.getElementById('kpi-companies').innerText = filteredDB.length;
+            
+            const totalRev = filteredDB.reduce((a,b) => a + b.smart.revenue, 0);
+            document.getElementById('kpi-revenue').innerText = `$${totalRev.toLocaleString()}M`;
+
+            const validRatings = filteredDB.filter(c => c.smart.rating > 0);
+            const avgRating = validRatings.length ? (validRatings.reduce((a,b) => a+b.smart.rating, 0)/validRatings.length).toFixed(1) : '-';
+            document.getElementById('kpi-rating').innerText = avgRating + " / 5.0";
+
+            // Count total data points as proxy for products/SKUs info density
+            const points = filteredDB.reduce((a,b) => a + b.data.length, 0);
+            document.getElementById('kpi-products').innerText = points.toLocaleString();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            if(filteredDB.length === 0) {
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+            document.getElementById('empty-state').style.display = 'none';
+
+            filteredDB.forEach(c => {
+                let badgeClass = 'badge-na';
+                if(c.smart.region === 'Europe') badgeClass = 'badge-eu';
+                if(c.smart.region === 'Asia') badgeClass = 'badge-as';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center"><input type="checkbox" onchange="toggleCompare('${c.id}')" ${compareSet.has(c.id.toString())?'checked':''}></td>
+                    <td style="font-weight:600; color:var(--primary);">${c.name}</td>
+                    <td><span class="badge ${badgeClass}">${c.smart.region}</span></td>
+                    <td>${c.smart.industry.substring(0, 20)}...</td>
+                    <td>${c.smart.revenueStr}</td>
+                    <td><i class="fa-solid fa-star" style="color:#f59e0b"></i> ${c.smart.rating || '-'}</td>
+                    <td><button class="btn btn-outline" style="padding:4px 8px; font-size:10px;">Details</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 7. CHARTS (CHART.JS) ---
+        function renderCharts() {
+            const ctxRev = document.getElementById('revChart');
+            const ctxGeo = document.getElementById('geoChart');
+            const ctxRadar = document.getElementById('radarChart');
+            const ctxScatter = document.getElementById('scatterChart');
+
+            const names = filteredDB.map(c => c.name);
+            const revenues = filteredDB.map(c => c.smart.revenue);
+            
+            // 1. Revenue Bar
+            if(charts.rev) charts.rev.destroy();
+            charts.rev = new Chart(ctxRev, {
+                type: 'bar',
+                data: {
+                    labels: names,
+                    datasets: [{ label: 'Est. Revenue ($M)', data: revenues, backgroundColor: '#3b82f6', borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 2. Geo Donut
+            const regions = {};
+            filteredDB.forEach(c => regions[c.smart.region] = (regions[c.smart.region]||0)+1);
+            
+            if(charts.geo) charts.geo.destroy();
+            charts.geo = new Chart(ctxGeo, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(regions),
+                    datasets: [{ data: Object.values(regions), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#64748b'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 3. Sentiment Radar
+            // Compare first 3 companies or top 3 by revenue
+            const top3 = filteredDB.slice(0, 3);
+            if(charts.radar) charts.radar.destroy();
+            charts.radar = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['Rating', 'Revenue Impact', 'Emp. Efficiency', 'Data Depth'],
+                    datasets: top3.map((c, i) => ({
+                        label: c.name,
+                        data: [c.smart.rating, Math.min(c.smart.revenue/50, 5), Math.min(c.smart.employees/100, 5), Math.min(c.data.length/10, 5)],
+                        borderColor: ['#3b82f6', '#10b981', '#f59e0b'][i],
+                        backgroundColor: 'rgba(0,0,0,0)'
+                    }))
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 4. Scatter (Employees vs Revenue)
+            const scatterData = filteredDB.map(c => ({ x: c.smart.employees, y: c.smart.revenue, label: c.name }));
+            if(charts.scatter) charts.scatter.destroy();
+            charts.scatter = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Companies',
+                        data: scatterData,
+                        backgroundColor: '#ef4444'
+                    }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { callbacks: { label: (ctx) => ctx.raw.label } } },
+                    scales: { x: { title: {display:true, text:'Employees'} }, y: { title: {display:true, text:'Revenue ($M)'} } }
+                }
+            });
+        }
+
+        // --- 8. COMPARISON ---
+        function toggleCompare(id) {
+            id = id.toString();
+            if(compareSet.has(id)) compareSet.delete(id);
+            else compareSet.add(id);
+            
+            const btn = document.getElementById('compareFab');
+            document.getElementById('compCount').innerText = compareSet.size;
+            btn.style.display = compareSet.size > 0 ? 'flex' : 'none';
+        }
+
+        function openCompare() {
+            if(compareSet.size < 2) return alert("Select at least 2 companies.");
+            
+            const comps = db.filter(c => compareSet.has(c.id.toString()));
+            // Collect all unique keys
+            const keysMap = {}; // { Category: [Keys] }
+            comps.forEach(c => {
+                c.data.forEach(d => {
+                    if(!keysMap[d.cat]) keysMap[d.cat] = new Set();
+                    keysMap[d.cat].add(d.key);
+                });
+            });
+
+            let html = `<thead><tr><th style="z-index:20; left:0;">Data Point</th>`;
+            comps.forEach(c => html += `<th>${c.name}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            for(const [cat, kSet] of Object.entries(keysMap)) {
+                html += `<tr><td colspan="${comps.length+1}" class="comp-section">${cat}</td></tr>`;
+                kSet.forEach(k => {
+                    html += `<tr><td style="font-weight:600; color:#64748b">${k}</td>`;
+                    comps.forEach(c => {
+                        const dp = c.data.find(d => d.cat === cat && d.key === k);
+                        html += `<td>${dp ? dp.val : '-'}</td>`;
+                    });
+                    html += `</tr>`;
+                });
+            }
+
+            document.getElementById('compTable').innerHTML = html;
+            document.getElementById('compareModal').style.display = 'flex';
+        }
+
+        function closeCompare() { document.getElementById('compareModal').style.display = 'none'; }
+
+        // --- 9. HELPERS ---
+        function switchView(view, tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            document.getElementById('analytics').classList.remove('active');
+            document.getElementById('list').classList.remove('active');
+            document.getElementById(view).classList.add('active');
+        }
+
+        function resetData() {
+            if(confirm("Clear all data?")) {
+                localStorage.removeItem(DB_KEY);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
